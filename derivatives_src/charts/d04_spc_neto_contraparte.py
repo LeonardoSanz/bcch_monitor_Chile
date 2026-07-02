@@ -1,0 +1,26 @@
+from __future__ import annotations
+
+import pandas as pd
+import plotly.express as px
+
+from derivatives_src.charts._common import base_layout, build_basic_dataframe, empty_figure
+from derivatives_src.io.bcch_api import BCCHClient
+from derivatives_src.series_registry import SeriesRegistry
+
+CHART_ID = "d04_spc_clp_neto_contraparte"
+TITLE = "D04 - SPC CLP posición neta tasa variable por contraparte"
+
+
+def build_dataframe(client: BCCHClient | None, registry: SeriesRegistry, start_date: str, end_date: str, demo: bool = False) -> pd.DataFrame:
+    df = build_basic_dataframe(CHART_ID, client, registry, start_date, end_date, demo)
+    if df.empty:
+        return df
+    return df.groupby(["date", "dimension_1", "label", "unit"], as_index=False)["value"].sum().rename(columns={"dimension_1": "contraparte"})
+
+
+def build_figure(df: pd.DataFrame):
+    if df.empty:
+        return empty_figure("Faltan series para SPC neto por contraparte")
+    fig = px.line(df, x="date", y="value", color="contraparte", markers=True, hover_data=["unit"])
+    fig.add_hline(y=0, line_dash="dash")
+    return base_layout(fig, TITLE, yaxis_title=df["unit"].iloc[0])
